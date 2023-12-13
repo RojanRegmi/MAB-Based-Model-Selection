@@ -14,6 +14,7 @@ class FeatureExtractor:
         self.dataset_indexer = self.get_dataset_dictionary()
         self.parent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
         self.fs = fs
+        self.feature_list = None
         
     
     def get_dataset_dictionary(self):
@@ -72,6 +73,9 @@ class FeatureExtractor:
         for data in dataset_list:
             feature_df = tsfel.time_series_features_extractor(cfg_file, data, fs=self.fs)
             feature_list.append(feature_df)
+            
+        
+        self.feature_list = feature_list
         
         return feature_list
         
