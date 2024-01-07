@@ -5,7 +5,7 @@ Please also check the authors' original paper and implementation for reference.'
 
 # Set current working directory to the main branch of RLMSAD
 import sys
-sys.path.append('/usr/local/data/elisejzh/Projects/RLMSAD') # This is the path setting on my computer, modify this according to your need
+sys.path.append('C:\Users\sharmapoudel\Documents\MAB-Model-Selection\MAB-Based-Model-Selection') # This is the path setting on my computer, modify this according to your need
 
 import numpy as np
 import pandas as pd
@@ -26,7 +26,7 @@ def data_process_SWaT(path_normal,path_attack,down_rate=5,window_size=12):
     # Handling Normal Data
     #Read
     normal = pd.read_csv(path_normal)
-    normal = normal.drop(["Timestamp" , "Normal/Attack" ] , axis = 1)
+    normal = normal.drop(["Timestamp" , "Normal/Attack" ] , axis = 1) # axis = 1 means columns. axis = 0 is rows. This drops both "Timestamp" and "Normal/Attack"
     #Downsampling
     normal=normal.groupby(np.arange(len(normal.index)) // down_rate).mean()
     #Transform all columns into float64

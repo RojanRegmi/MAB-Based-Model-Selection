@@ -1,7 +1,7 @@
 # Set current working directory to the main branch of RLMSAD
 import os
 import sys
-sys.path.append('PATH=$PATH:C:\Users\sharmapoudel\Documents\MAB-Model-Selection\MAB-Based-Model-Selection') # This is the path setting on my computer, modify this according to your need
+sys.path.append('/usr/local/data/elisejzh/Projects/RLMSAD') # This is the path setting on my computer, modify this according to your need
 from data_process import *
 from base_detectors.USAD.usad_model import *
 import numpy as np
@@ -68,3 +68,4 @@ def train_test(list_pred_sc,list_gtruth, train_portion=0.7):
 def raw_thresholds(raw_scores, contamination=0.1):
     '''raw_scores: each 1D numpy array, the raw anomaly scores'''
     return np.sort(raw_scores)[int(len(raw_scores)*(1-contamination))]
+
