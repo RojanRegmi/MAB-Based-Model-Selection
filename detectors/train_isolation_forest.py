@@ -1,12 +1,12 @@
 
 from sklearn.ensemble import IsolationForest
+from sklearn.model_selection import train_test_split
 
 import numpy as np
 import pandas as pd
 import pickle
 from glob import glob
 
-from src.Components.data_processing import data_process
 
 
 file_name = '../datasets/Dodgers/*.out'
@@ -23,7 +23,7 @@ for file in file_list:
 """combined_df = pd.concat(dfs)
 combined_np = combined_df.to_numpy(dtype=np.float32)"""
 
-window_data = data_process(file_list[0])
+window_data = train_test_split(dfs[0], test_size=0.4, train_size=0.6)
 
 np.random.seed(42)
 
