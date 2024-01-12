@@ -7,3 +7,4 @@ tf-agents
 tensorflow
 tsfel
 scikit-learn
+sklearn
