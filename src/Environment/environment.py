@@ -6,13 +6,14 @@ from tf_agents.agents import tf_agent
 from tf_agents.drivers import driver
 from tf_agents.environments import py_environment
 from tf_agents.environments import tf_environment
-from tf_agents.environments import tf_py_environment
+from tf_agents.environments import bandit_py_environment
 from tf_agents.policies import tf_policy
 from tf_agents.specs import array_spec
 from tf_agents.specs import tensor_spec
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
 from tf_agents.trajectories import policy_step
+from tf_agents.typing import types
 
 from src.logger import logging
 from src.exception import CustomException
