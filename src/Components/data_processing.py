@@ -23,10 +23,10 @@ def data_process(file_path, down_rate=5, window_size=50, step=1):
     df = pd.read_csv(file_path)
 
     #Downsampling
-    down_df=df.groupby(np.arange(len(df.index)) // down_rate).mean()
+    #down_df=df.groupby(np.arange(len(df.index)) // down_rate).mean()
 
     #Create Sliding Windows
-    windowed_data = down_df.values[np.arange(window_size)[None, :] + np.arange(down_df.shape[0] - window_size, step=step)[:, None]]
+    windowed_data = df.values[np.arange(window_size)[None, :] + np.arange(df.shape[0] - window_size, step=window_size)[:, None]]
 
     return windowed_data
 

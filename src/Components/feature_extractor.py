@@ -78,5 +78,13 @@ class FeatureExtractor:
         self.feature_list = feature_list
         
         return feature_list
+    
+    def feature_extractor_data(self, data: np.ndarray, feature_type: str = None):
+        
+        cfg_file = tsfel.get_features_by_domain(feature_type)
+        
+        feature_np = tsfel.time_series_features_extractor(cfg_file, data, fs=self.fs)
+        
+        return feature_np.values
         
         
