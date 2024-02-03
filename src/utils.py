@@ -59,6 +59,11 @@ def train_test_anomaly(data: pd.DataFrame, contamination= 0.11, test_size = 0.3,
 
     return train_data, test_shuffled
 
+def raw_thresholds(raw_scores, contamination=0.1):
+    
+    '''raw_scores: each 1D numpy array, the raw anomaly scores'''
+    return np.sort(raw_scores)[int(len(raw_scores)*(1-contamination))]
+
 
 
 
