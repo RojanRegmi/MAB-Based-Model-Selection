@@ -1,5 +1,9 @@
 datasets/
-.pyc
-.log
+*.pyc
+*.log
 venv/
 base_detectors/
+references/
+notebooks/logs/
+*.sav
+.gitignore
