@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+from glob import glob
 
 def find_subdirectory(target_subdir):
 
@@ -63,6 +64,21 @@ def raw_thresholds(raw_scores, contamination=0.1):
     
     '''raw_scores: each 1D numpy array, the raw anomaly scores'''
     return np.sort(raw_scores)[int(len(raw_scores)*(1-contamination))]
+
+def concatenate_csv_files(directory):
+    csv_files = glob(directory)
+    
+    dataframes = []
+    
+    for file in csv_files:
+        df = pd.read_csv(file)
+        dataframes.append(df)
+    
+    # Concatenate all DataFrames into a single DataFrame
+    concatenated_df = pd.concat(dataframes, ignore_index=True)
+    
+    return concatenated_df
+
 
 
 
