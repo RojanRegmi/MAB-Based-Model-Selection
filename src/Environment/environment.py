@@ -68,15 +68,15 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
 
 class MyModelSelectionEnv(BanditPyEnvironment):
 
-    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float]):
-
-        super().__init__(list_thresholds, list_gtruth)
+    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], batch_size: int = 1):
 
         self.time_series = time_series
         self.subsequences = data_process(time_series)
+        # self._batch_size = batch_size
 
         self.list_thresholds = list_thresholds
         self.gtruth = list_gtruth
+        self.pointer = 0
 
         self.len_data = len(time_series)
 
@@ -84,8 +84,10 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
         self.action_list = []
 
-        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum = 1, name='Select Models')
-        observation_spec = array_spec.BoundedArraySpec(shape=(1, 159), dtype=np.float64, name='observation') # shape changed from (1, 318) to (1, 159)
+        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum = 1, name='Models')
+        observation_spec = array_spec.ArraySpec(shape=(159,), dtype=np.float64, name='observation') # shape changed from (1, 318) to (1, 159)
+
+        self._time_step_spec = ts.time_step_spec(observation_spec)
 
         super(MyModelSelectionEnv, self).__init__(observation_spec, action_spec)
 
@@ -100,13 +102,12 @@ class MyModelSelectionEnv(BanditPyEnvironment):
     
 
     def _feature_extractor(self, subseq):
-
+        
         return self.features_obj.feature_extractor_data(subseq)
     
     def _step(self, action):
 
-        reward = self._apply_action(action)
-        
+        reward, _ = self._apply_action(action)
         self.pointer += 1
 
         if self.pointer >= self.len_data:
@@ -124,8 +125,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
                 
     def _observe(self):
 
-        self._observation = self._feature_extractor(self.subsequences[self.pointer])
-        return self._observation
+        return self._feature_extractor(self.subsequences[self.pointer])
     
     
     def _apply_action(self, action):
@@ -150,7 +150,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
         self.action_list.append(action)
         
-        return reward
+        return reward, label_np
     
     def _reward_function(self, label_np):
 
@@ -162,7 +162,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         fp = 0
         tn = 0
 
-        for i, j in zip(gtruth_split, label_np):
+        for i, j in zip(gtruth_np, label_np):
            
            if i==1 and j==1:   # If the model predicts anomaly correctly - True Positive (TP)
               tp +=1
@@ -180,3 +180,15 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         reward = (1 * tp + (-1.5) * fn + (-0.5) * fp + 0.1 * tn) / len(gtruth_split)
 
         return reward
+    
+    def time_step_spec(self) -> ts.TimeStep:
+       return super().time_step_spec()
+    
+    def action_spec(self):
+       return super().action_spec()
+    
+    def get_info(self):
+       return super().get_info()
+    
+    def compute_optimal_reward(self):
+        pass
