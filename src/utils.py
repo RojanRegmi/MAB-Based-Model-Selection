@@ -3,18 +3,27 @@ import pandas as pd
 import numpy as np
 from glob import glob
 
-def find_subdirectory(target_subdir):
+def find_subdirectory(target_subdir, parent_dir):
 
-    parent_dir = os.pardir
+    """
+       target_subdir: The file that you are looking for
+       parent_dir: The Directory where you want to search
+
+       returns
+       dataset_dir: This is all the directories inside parent_dir that have the file target_subdir
+    """
+
+    target_dir = []
+    target_dir.append(target_subdir)
+    dataset_dir = []
         
     for root, dirs, files in os.walk(parent_dir):
             
-        if target_subdir in dirs:
+        if target_dir == files:
                 
-            dataset_dir = os.path.join(root, target_subdir)
-            all_files = files
+            dataset_dir.append(root)
         
-    return dataset_dir, all_files
+    return dataset_dir
 
 def train_test_anomaly(data: pd.DataFrame, contamination= 0.11, test_size = 0.3, random_state=42):
 

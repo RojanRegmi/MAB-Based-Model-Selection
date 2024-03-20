@@ -83,8 +83,12 @@ class FeatureExtractor:
         
         cfg_file = tsfel.get_features_by_domain(feature_type)
         
-        feature_np = tsfel.time_series_features_extractor(cfg_file, data, fs=self.fs)
+        feature_df = tsfel.time_series_features_extractor(cfg_file, data, fs=self.fs)
+
+        feature_np = np.round(feature_df.values, decimals=4)
+
+        feature_np = feature_np.reshape((-1,))
         
-        return feature_np.values
+        return feature_np
         
         
