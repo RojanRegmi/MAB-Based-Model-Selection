@@ -68,7 +68,7 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
   def _apply_action(self, action):
     """Applies `action` to the Environment and returns the corresponding reward.
     """
-    
+
 
 class MyModelSelectionEnv(BanditPyEnvironment):
 
@@ -81,15 +81,15 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         self.list_thresholds = list_thresholds
         self.gtruth = list_gtruth
         self.pointer = 0
+        self.pred_list = []
 
         self.len_data = len(time_series)
 
         self.features_obj = FeatureExtractor()
 
-        self.action_list = []
         self.models = self._load_models()
 
-        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum = 3, name='Models')
+        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum = 2, name='Models')
         observation_spec = array_spec.ArraySpec(shape=(159,), dtype=np.float64, name='observation')
 
         self._time_step_spec = ts.time_step_spec(observation_spec)
@@ -98,18 +98,18 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
     def _load_models(self):
        
-       model1 = pickle.load(open(f'../saved_models/iforest_dodgers_v2.sav','rb'))
-       model2 = pickle.load(open(f'../saved_models/osvm_dodgers_v2.sav', 'rb'))
+       model1 = pickle.load(open(f'../saved_models/iforest_dodgers_v3.sav','rb'))
+       # model2 = pickle.load(open(f'../saved_models/osvm_dodgers_v2.sav', 'rb'))
        model3 = pickle.load(open(f'../saved_models/copod_dodgers_v2.sav', 'rb'))
        model4 = pickle.load(open(f'../saved_models/clof_dodgers_v2.sav', 'rb')) 
 
-       return [model1, model2, model3, model4]
-       
-
+       return [model1, model3, model4]
+    
 
     def _reset(self):
 
         self.pointer = 0
+        self.pred_list = []
         self.done = False
 
         starter = self._feature_extractor(self.subsequences[0])
@@ -122,7 +122,8 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         return self.features_obj.feature_extractor_data(subseq)
     
     def _step(self, action):
-
+        
+        
         reward, _ = self._apply_action(action)
         self.pointer += 1
 
@@ -131,12 +132,18 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         else:
             self.done = False
 
+        print(f'Step: {self.pointer}')
+
         if not self.done:
             return ts.transition(self._observe(), reward)
             #return ts.transition(self.subsequences[self.pointer], reward)
         else:
            return ts.termination(self._observe(), reward)
            #return ts.termination(self.subsequences[self.pointer], reward)
+
+    def return_prediction(self):
+       
+       return self.pred_list
 
                 
     def _observe(self):
@@ -146,70 +153,47 @@ class MyModelSelectionEnv(BanditPyEnvironment):
     
     def _apply_action(self, action):
 
+        feats = self.time_series['value'].iloc[self.pointer + 50: self.pointer+51].values.reshape(-1, 1)
+
         if action == 0:
             # model = pickle.load(open(f'../saved_models/iforest_dodgers_v2.sav','rb'))
-            feats = self.subsequences[self.pointer].reshape(-1,1)
             score = self.models[0].decision_function(feats)
 
-            label_list = [1 if i < self.list_thresholds[0] else 0 for i in score]
-            label_np = np.array(label_list)
+            label_value = 1 if score < self.list_thresholds[0] else 0
 
         elif action == 1:
             # model = pickle.load(open(f'../saved_models/osvm_dodgers_v2.sav', 'rb'))
-            feats = self.subsequences[self.pointer].reshape(-1,1)
             score = self.models[1].decision_function(feats)
 
-            label_list = [1 if i > self.list_thresholds[1] else 0 for i in score]
-            label_np = np.array(label_list)
+            label_value = 1 if score > self.list_thresholds[1] else 0
         
         elif action == 2:
-           
-           feats = self.subsequences[self.pointer].reshape(-1, 1)
            score = self.models[2].decision_function(feats)
 
-           label_list = [1 if i > self.list_thresholds[2] else 0 for i in score]
-           label_np = np.array(label_list)
+           label_value = 1 if score > self.list_thresholds[2] else 0
         
-        elif action == 3:
-           
-           feats = self.subsequences[self.pointer].reshape(-1, 1)
+        """elif action == 3:
            score = self.models[3].decision_function(feats)
 
-           label_list = [1 if i > self.list_thresholds[3] else 0 for i in score]
-           label_np = np.array(label_list)
-           
-        reward = self._reward_function(label_np)
-
-        self.action_list.append(action)
+           label_value = 1 if score > self.list_thresholds[3] else 0"""
         
-        return reward, label_np
+           
+        reward = self._reward_function(label_value)
+        
+        return reward, label_value
     
-    def _reward_function(self, label_np):
+    def _reward_function(self, label_value):
 
-        gtruth_split = self.gtruth[self.pointer:self.pointer+50]
-        gtruth_np = np.array(gtruth_split)
-
-        tp = 0
-        fn = 0
-        fp = 0
-        tn = 0
-
-        for i, j in zip(gtruth_np, label_np):
-           
-           if i==1 and j==1:   # If the model predicts anomaly correctly - True Positive (TP)
-              tp +=1
-              
-           elif i==1 and j==0: # If the model predicts 0 normal incorrectly - False Negative (FN)
-              fn +=1
-        
-           elif i==0 and j==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
-              fp +=1
-        
-           elif i ==0 and j==0: # If the model predicts 0 normal correctly - True Negative (TN)
-              tn +=1
-
-        
-        reward = (1 * tp + (-1.5) * fn + (-0.5) * fp + 0.1 * tn) / len(gtruth_split)
+        if self.gtruth[self.pointer]==1: # If the ground truth is 1 anomaly
+            if label_value==1: # If the model predicts 1 anomaly correctly - True Positive (TP)
+                reward = 1
+            else: # If the model predicts 0 normal incorrectly - False Negative (FN)
+                reward = -1.5
+        else: # If the ground truth is 0 normal
+            if label_value==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
+                reward = -0.5
+            else: # If the model predicts 0 normal correctly - True Negative (TN)
+                reward = 0.1
 
         return reward
     

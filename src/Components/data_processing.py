@@ -24,7 +24,7 @@ def data_process(df, down_rate=5, window_size=50, step=1):
     #down_df=df.groupby(np.arange(len(df.index)) // down_rate).mean()
 
     #Create Sliding Windows
-    windowed_data = df['value'].values[np.arange(window_size)[None, :] + np.arange(df.shape[0] - window_size, step=window_size)[:, None]]
+    windowed_data = df['value'].values[np.arange(window_size)[None, :] + np.arange(df.shape[0] - window_size, step=1)[:, None]]
 
     return windowed_data
 

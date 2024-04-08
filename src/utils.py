@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from glob import glob
 
+
+
 def find_subdirectory(target_subdir, parent_dir):
 
     """
@@ -25,7 +27,7 @@ def find_subdirectory(target_subdir, parent_dir):
         
     return dataset_dir
 
-def train_test_anomaly(data: pd.DataFrame, contamination= 0.11, test_size = 0.3, random_state=42):
+def train_test_anomaly(data: pd.DataFrame, contamination= 0.111, test_size = 0.3, shuffle=True):
 
     """
       This function is for creating a train test split for anomaly algorithm training. Make sure to label the anomaly column as 'anomaly'.
@@ -50,17 +52,19 @@ def train_test_anomaly(data: pd.DataFrame, contamination= 0.11, test_size = 0.3,
     normal_shuffle = normal_data_index
     anomaly_shuffle = anomaly_index
 
-    np.random.seed(random_state)
+    np.random.seed(42)
+
+    if shuffle:
+        np.random.shuffle(normal_shuffle)
+        np.random.shuffle(anomaly_shuffle)
 
 
-    np.random.shuffle(normal_shuffle)
-    normal_shuffle_train = normal_shuffle[0:train_length]
-    normal_shuffle_test = normal_shuffle[-test_length_normal:]
+    normal_train = normal_shuffle[0:train_length]
+    normal_test = normal_shuffle[-test_length_normal:]
 
-    np.random.shuffle(anomaly_shuffle)
-
-    train_data = data.loc[normal_shuffle_train]
-    test_normal = data.loc[normal_shuffle_test]
+    
+    train_data = data.loc[normal_train]
+    test_normal = data.loc[normal_test]
     test_anomaly = data.loc[anomaly_shuffle]
 
     test_data = pd.concat((test_normal, test_anomaly))
@@ -74,19 +78,7 @@ def raw_thresholds(raw_scores, contamination=0.1):
     '''raw_scores: each 1D numpy array, the raw anomaly scores'''
     return np.sort(raw_scores)[int(len(raw_scores)*(1-contamination))]
 
-def concatenate_csv_files(directory):
-    csv_files = glob(directory)
-    
-    dataframes = []
-    
-    for file in csv_files:
-        df = pd.read_csv(file)
-        dataframes.append(df)
-    
-    # Concatenate all DataFrames into a single DataFrame
-    concatenated_df = pd.concat(dataframes, ignore_index=True)
-    
-    return concatenated_df
+
 
 
 
