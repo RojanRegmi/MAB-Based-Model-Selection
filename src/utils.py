@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 from glob import glob
-
-
+from statsmodels.tsa.stattools import acf 
+from scipy.signal import argrelextrema
 
 def find_subdirectory(target_subdir, parent_dir):
 
@@ -74,9 +74,47 @@ def train_test_anomaly(data: pd.DataFrame, contamination= 0.111, test_size = 0.3
     return train_data, test_shuffled
 
 def raw_thresholds(raw_scores, contamination=0.1):
-    
+    # Adapted from RLMSAD 
     '''raw_scores: each 1D numpy array, the raw anomaly scores'''
     return np.sort(raw_scores)[int(len(raw_scores)*(1-contamination))]
+
+def find_length(data):
+
+    # Adapted from TSB-UAD
+    if len(data.shape)>1:
+        return 0
+    data = data[:min(20000, len(data))]
+    
+    base = 3
+    auto_corr = acf(data, nlags=400, fft=True)[base:]
+    
+    
+    local_max = argrelextrema(auto_corr, np.greater)[0]
+    try:
+        max_local_max = np.argmax([auto_corr[lcm] for lcm in local_max])
+        if local_max[max_local_max]<3 or local_max[max_local_max]>300:
+            return 125
+        return local_max[max_local_max]+base
+    except:
+        return 125
+
+
+def detect_anomalies(data, window_size, min_threshold, max_threshold, threshold_factor, overlap):
+    anomalies = []
+    for i in range(0, len(data) - window_size + 1, overlap):
+        window = data[i:i+window_size]
+        mean = np.mean(window)
+        std_dev = np.std(window)
+        threshold = mean + threshold_factor * std_dev
+        
+        if min_threshold <= threshold <= max_threshold and data[i] > threshold:
+            anomalies.append(1)
+        else:
+            anomalies.append(0)
+    
+    return anomalies
+
+
 
 
 

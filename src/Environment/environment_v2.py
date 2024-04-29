@@ -100,8 +100,8 @@ class MyModelSelectionEnv(BanditPyEnvironment):
        
        model1 = pickle.load(open(f'../saved_models/iforest_dodgers_v3.sav','rb'))
        # model2 = pickle.load(open(f'../saved_models/osvm_dodgers_v2.sav', 'rb'))
-       model3 = pickle.load(open(f'../saved_models/copod_dodgers_v2.sav', 'rb'))
-       model4 = pickle.load(open(f'../saved_models/clof_dodgers_v2.sav', 'rb')) 
+       model3 =  pickle.load(open(f'../saved_models/clof_dodgers_v2.sav', 'rb')) 
+       model4 = pickle.load(open(f'../saved_models/copod_dodgers_v2.sav', 'rb'))
 
        return [model1, model3, model4]
     
@@ -159,18 +159,18 @@ class MyModelSelectionEnv(BanditPyEnvironment):
             # model = pickle.load(open(f'../saved_models/iforest_dodgers_v2.sav','rb'))
             score = self.models[0].decision_function(feats)
 
-            label_value = 1 if score < self.list_thresholds[0] else 0
+            label_value = 1 if (score < self.list_thresholds[0]) else 0
 
         elif action == 1:
             # model = pickle.load(open(f'../saved_models/osvm_dodgers_v2.sav', 'rb'))
             score = self.models[1].decision_function(feats)
 
-            label_value = 1 if score > self.list_thresholds[1] else 0
+            label_value = 1 if (score > self.list_thresholds[1]) else 0
         
         elif action == 2:
            score = self.models[2].decision_function(feats)
 
-           label_value = 1 if score > self.list_thresholds[2] else 0
+           label_value = 1 if (score > self.list_thresholds[2]) else 0
         
         """elif action == 3:
            score = self.models[3].decision_function(feats)
@@ -184,14 +184,14 @@ class MyModelSelectionEnv(BanditPyEnvironment):
     
     def _reward_function(self, label_value):
 
-        if self.gtruth[self.pointer]==1: # If the ground truth is 1 anomaly
+        if self.gtruth[self.pointer + 50]==1: # If the ground truth is 1 anomaly
             if label_value==1: # If the model predicts 1 anomaly correctly - True Positive (TP)
-                reward = 1
+                reward = 1.25
             else: # If the model predicts 0 normal incorrectly - False Negative (FN)
                 reward = -1.5
         else: # If the ground truth is 0 normal
             if label_value==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
-                reward = -0.5
+                reward = -0.75
             else: # If the model predicts 0 normal correctly - True Negative (TN)
                 reward = 0.1
 

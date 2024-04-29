@@ -15,6 +15,7 @@ from tf_agents.typing import types
 
 import pickle
 import random
+import math
 
 import sys
 sys.path.append('..')
@@ -24,6 +25,7 @@ from src.logger import logging
 from src.exception import CustomException
 from src.Components.feature_extractor import FeatureExtractor
 from src.Components.data_processing import data_process
+from src.utils import *
 
 from ..utils import *
 
@@ -68,49 +70,66 @@ class BanditPyEnvironment(py_environment.PyEnvironment):
   def _apply_action(self, action):
     """Applies `action` to the Environment and returns the corresponding reward.
     """
-    
+
 
 class MyModelSelectionEnv(BanditPyEnvironment):
 
-    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], step: int = 1):
+    """
+        TF-Agents Bandit Environment for Model Selection.
+
+        Initialization Parameters:
+
+        time_series: The time series to be analysed.
+        list_thresholds: The list of thresholds for the the different models
+        list_gtruth: The labeled anomaly ground truth
+        list_predicted_score: The list of predictions from all the different models
+
+    """
+
+    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], subsequence: List[pd.DataFrame], list_predicted_score: List[float], list_predicted_label: List[List[float]]):
 
         self.time_series = time_series
-        self.step = step
-        self.subsequences = data_process(time_series, step=self.step)
+        self.window_size = 100 # find_length(time_series[['value']].to_numpy())
+        self.subsequences = subsequence
         # self._batch_size = batch_size
+
 
         self.list_thresholds = list_thresholds
         self.gtruth = list_gtruth
         self.pointer = 0
+        self.pred_scr_list = list_predicted_score
+        self.pointer2 = math.ceil((self.window_size - 1) / 2)
+        self.labels = list_predicted_label
 
         self.len_data = len(time_series)
 
-        self.features_obj = FeatureExtractor()
+        # self.features_obj = FeatureExtractor()
+        # self.observation_len = len(self._feature_extractor(self.subsequences[0]))
 
-        self.action_list = []
-        self.models = self._load_models()
+        # self.models = self._load_models()
 
-        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum = 3, name='Models')
-        observation_spec = array_spec.ArraySpec(shape=(159,), dtype=np.float64, name='observation')
+        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=6, name='Models')
+        observation_spec = array_spec.ArraySpec(shape=(9,), dtype=np.float64, name='observation')
 
         self._time_step_spec = ts.time_step_spec(observation_spec)
 
         super(MyModelSelectionEnv, self).__init__(observation_spec, action_spec)
 
-    def _load_models(self):
+    """def _load_models(self):
        
-       model1 = pickle.load(open(f'../saved_models/iforest_dodgers_v2.sav','rb'))
-       model2 = pickle.load(open(f'../saved_models/osvm_dodgers_v2.sav', 'rb'))
-       model3 = pickle.load(open(f'../saved_models/copod_dodgers_v2.sav', 'rb'))
-       model4 = pickle.load(open(f'../saved_models/clof_dodgers_v2.sav', 'rb')) 
+       model1 = pickle.load(open(f'../saved_models/iforest_dodgers_v3.sav','rb'))
+       # model2 = pickle.load(open(f'../saved_models/osvm_dodgers_v2.sav', 'rb'))
+       model3 =  pickle.load(open(f'../saved_models/clof_dodgers_v2.sav', 'rb')) 
+       model4 = pickle.load(open(f'../saved_models/copod_dodgers_v2.sav', 'rb'))
 
-       return [model1, model2, model3, model4]
-       
-
+       return [model1, model3, model4]
+    """
 
     def _reset(self):
 
         self.pointer = 0
+        self.pointer2 = math.ceil((self.window_size - 1) / 2)
+        self.pred_list = []
         self.done = False
 
         starter = self._feature_extractor(self.subsequences[0])
@@ -120,19 +139,21 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
     def _feature_extractor(self, subseq):
         
-        return self.features_obj.feature_extractor_data(subseq)
+        return subseq.to_numpy().T.reshape(-1,)
     
     def _step(self, action):
-
-        reward, _ = self._apply_action(action)
+        
+        
+        reward, lab, scr = self._apply_action(action)
         self.pointer += 1
+        self.pointer2 += 1
 
         if self.pointer >= self.len_data:
             self.done = True
         else:
             self.done = False
-        
-        print(f'Step: {self.pointer}')
+
+        print(f'Step: {self.pointer}, label: {lab}')
 
         if not self.done:
             return ts.transition(self._observe(), reward)
@@ -148,70 +169,25 @@ class MyModelSelectionEnv(BanditPyEnvironment):
     
     
     def _apply_action(self, action):
+
+        anomaly_score = self.pred_scr_list[action][self.pointer2]
+        label_value = self.labels[action][self.pointer2]
+        reward = self._reward_function(label_value)
         
-        feats = self.subsequences[self.pointer][40:50].reshape(-1,1)
-        # feats = self.subsequences[self.pointer].reshape(-1,1)
-
-        if action == 0:
-            
-            score = self.models[0].decision_function(feats)
-
-            label_list = [1 if i < self.list_thresholds[0] else 0 for i in score]
-            label_np = np.array(label_list)
-
-        elif action == 1:
-            
-            score = self.models[1].decision_function(feats)
-
-            label_list = [1 if i > self.list_thresholds[1] else 0 for i in score]
-            label_np = np.array(label_list)
-        
-        elif action == 2:
-           
-           score = self.models[2].decision_function(feats)
-
-           label_list = [1 if i > self.list_thresholds[2] else 0 for i in score]
-           label_np = np.array(label_list)
-        
-        elif action == 3:
-          
-           score = self.models[3].decision_function(feats)
-
-           label_list = [1 if i > self.list_thresholds[3] else 0 for i in score]
-           label_np = np.array(label_list)
-           
-        reward = self._reward_function(label_np)
-
-        self.action_list.append(action)
-        
-        return reward, label_np
+        return reward, label_value, anomaly_score
     
-    def _reward_function(self, label_np):
+    def _reward_function(self, label_value):
 
-        gtruth_split = self.gtruth[self.pointer+40:self.pointer+50]
-        gtruth_np = np.array(gtruth_split)
-
-        tp = 0
-        fn = 0
-        fp = 0
-        tn = 0
-
-        for i, j in zip(gtruth_np, label_np):
-           
-           if i==1 and j==1:   # If the model predicts anomaly correctly - True Positive (TP)
-              tp +=1
-              
-           elif i==1 and j==0: # If the model predicts 0 normal incorrectly - False Negative (FN)
-              fn +=1
-        
-           elif i==0 and j==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
-              fp +=1
-        
-           elif i ==0 and j==0: # If the model predicts 0 normal correctly - True Negative (TN)
-              tn +=1
-
-        
-        reward = (1 * tp + (-1.5) * fn + (-0.5) * fp + 0.1 * tn) / len(gtruth_split)
+        if self.gtruth[self.pointer2]==1: # If the ground truth is 1 anomaly
+            if label_value==1: # If the model predicts 1 anomaly correctly - True Positive (TP)
+                reward = 3
+            else: # If the model predicts 0 normal incorrectly - False Negative (FN)
+                reward = -3
+        else: # If the ground truth is 0 normal
+            if label_value==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
+                reward = -1.5
+            else: # If the model predicts 0 normal correctly - True Negative (TN)
+                reward = 0.1
 
         return reward
     
