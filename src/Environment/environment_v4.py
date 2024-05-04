@@ -89,7 +89,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
     def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], subsequence: List[pd.DataFrame], list_predicted_score: List[float], list_predicted_label: List[List[float]]):
 
         self.time_series = time_series
-        self.window_size = 100 # find_length(time_series[['value']].to_numpy())
+        self.window_size = 25 # find_length(time_series[['value']].to_numpy())
         self.subsequences = subsequence
         # self._batch_size = batch_size
 
@@ -108,8 +108,8 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
         # self.models = self._load_models()
 
-        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=6, name='Models')
-        observation_spec = array_spec.ArraySpec(shape=(9,), dtype=np.float64, name='observation')
+        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=4, name='Models')
+        observation_spec = array_spec.ArraySpec(shape=(30,), dtype=np.float64, name='observation')
 
         self._time_step_spec = ts.time_step_spec(observation_spec)
 
@@ -182,10 +182,10 @@ class MyModelSelectionEnv(BanditPyEnvironment):
             if label_value==1: # If the model predicts 1 anomaly correctly - True Positive (TP)
                 reward = 3
             else: # If the model predicts 0 normal incorrectly - False Negative (FN)
-                reward = -3
+                reward = -4.5
         else: # If the ground truth is 0 normal
             if label_value==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
-                reward = -1.5
+                reward = -2.5
             else: # If the model predicts 0 normal correctly - True Negative (TN)
                 reward = 0.1
 
