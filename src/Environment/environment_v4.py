@@ -89,7 +89,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
     def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], subsequence: List[pd.DataFrame], list_predicted_score: List[float], list_predicted_label: List[List[float]]):
 
         self.time_series = time_series
-        self.window_size = 25 # find_length(time_series[['value']].to_numpy())
+        self.window_size = 100 # find_length(time_series[['value']].to_numpy())
         self.subsequences = subsequence
         # self._batch_size = batch_size
 
@@ -109,7 +109,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         # self.models = self._load_models()
 
         action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=4, name='Models')
-        observation_spec = array_spec.ArraySpec(shape=(30,), dtype=np.float64, name='observation')
+        observation_spec = array_spec.ArraySpec(shape=(50,), dtype=np.float64, name='observation')
 
         self._time_step_spec = ts.time_step_spec(observation_spec)
 
@@ -132,7 +132,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         self.pred_list = []
         self.done = False
 
-        starter = self._feature_extractor(self.subsequences[0])
+        starter = self._feature_extractor(self.subsequences.iloc[0])
 
         return ts.restart(starter)
     
@@ -157,15 +157,15 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
         if not self.done:
             return ts.transition(self._observe(), reward)
-            #return ts.transition(self.subsequences[self.pointer], reward)
+            
         else:
            return ts.termination(self._observe(), reward)
-           #return ts.termination(self.subsequences[self.pointer], reward)
+           
 
                 
     def _observe(self):
 
-        return self._feature_extractor(self.subsequences[self.pointer])
+        return self._feature_extractor(self.subsequences.iloc[self.pointer])
     
     
     def _apply_action(self, action):
