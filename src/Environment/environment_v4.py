@@ -132,14 +132,14 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         self.pred_list = []
         self.done = False
 
-        starter = self._feature_extractor(self.subsequences.iloc[0])
+        starter = self._feature_extractor(self.subsequences[0])
 
         return ts.restart(starter)
     
 
     def _feature_extractor(self, subseq):
         
-        return subseq.to_numpy().T.reshape(-1,)
+        return subseq.reshape(-1,)
     
     def _step(self, action):
         
@@ -165,7 +165,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
                 
     def _observe(self):
 
-        return self._feature_extractor(self.subsequences.iloc[self.pointer])
+        return self._feature_extractor(self.subsequences[self.pointer])
     
     
     def _apply_action(self, action):
