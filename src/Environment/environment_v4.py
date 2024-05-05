@@ -108,7 +108,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
         # self.models = self._load_models()
 
-        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=4, name='Models')
+        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=6, name='Models')
         observation_spec = array_spec.ArraySpec(shape=(50,), dtype=np.float64, name='observation')
 
         self._time_step_spec = ts.time_step_spec(observation_spec)
