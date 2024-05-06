@@ -86,7 +86,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
     """
 
-    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], subsequence: List[pd.DataFrame], list_predicted_score: List[float], list_predicted_label: List[List[float]]):
+    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], subsequence: List[pd.DataFrame], list_predicted_score: List[List[float]], list_predicted_label: List[List[float]]):
 
         self.time_series = time_series
         self.window_size = 100 # find_length(time_series[['value']].to_numpy())
@@ -102,14 +102,16 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         self.labels = list_predicted_label
 
         self.len_data = len(time_series)
+        self.len_feats = len(subsequence[0])
+        self._num_actions = len(list_predicted_label)
 
         # self.features_obj = FeatureExtractor()
         # self.observation_len = len(self._feature_extractor(self.subsequences[0]))
 
         # self.models = self._load_models()
 
-        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=6, name='Models')
-        observation_spec = array_spec.ArraySpec(shape=(50,), dtype=np.float64, name='observation')
+        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=(self._num_actions - 1), name='Models')
+        observation_spec = array_spec.ArraySpec(shape=(self.len_feats,), dtype=np.float64, name='observation')
 
         self._time_step_spec = ts.time_step_spec(observation_spec)
 
@@ -185,7 +187,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
                 reward = -3
         else: # If the ground truth is 0 normal
             if label_value==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
-                reward = -1.5
+                reward = -2
             else: # If the model predicts 0 normal correctly - True Negative (TN)
                 reward = 0.1
 
