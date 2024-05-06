@@ -182,10 +182,10 @@ class MyModelSelectionEnv(BanditPyEnvironment):
             if label_value==1: # If the model predicts 1 anomaly correctly - True Positive (TP)
                 reward = 3
             else: # If the model predicts 0 normal incorrectly - False Negative (FN)
-                reward = -3.5
+                reward = -3
         else: # If the ground truth is 0 normal
             if label_value==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
-                reward = -2
+                reward = -1.5
             else: # If the model predicts 0 normal correctly - True Negative (TN)
                 reward = 0.1
 
