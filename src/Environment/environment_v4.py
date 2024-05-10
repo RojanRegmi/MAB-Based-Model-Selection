@@ -86,12 +86,17 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
     """
 
-    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], subsequence: List[pd.DataFrame], list_predicted_score: List[List[float]], list_predicted_label: List[List[float]]):
+    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], subsequence: List[pd.DataFrame], list_predicted_score: List[List[float]], list_predicted_label: List[List[float]], filepath):
 
         self.time_series = time_series
-        self.window_size = 100 # find_length(time_series[['value']].to_numpy())
+        self.window_size = 25 # find_length(time_series[['value']].to_numpy())
         self.subsequences = subsequence
         # self._batch_size = batch_size
+
+        self.filepath = filepath
+        self.score_list = []
+        self.label_list = []
+        self.action_list = []
 
 
         self.list_thresholds = list_thresholds
@@ -150,6 +155,16 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         self.pointer += 1
         self.pointer2 += 1
 
+        self.score_list.append(scr)
+        self.label_list.append(lab)
+        self.action_list.apeend(action)
+
+        if self.pointer % 10000 == 0:
+           filename = self.filepath + f'env_output'
+           with open(self.filepath, 'wb') as file:
+              pickle.dum
+              
+
         if self.pointer >= self.len_data:
             self.done = True
         else:
@@ -182,12 +197,12 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
         if self.gtruth[self.pointer2]==1: # If the ground truth is 1 anomaly
             if label_value==1: # If the model predicts 1 anomaly correctly - True Positive (TP)
-                reward = 3
+                reward = 8
             else: # If the model predicts 0 normal incorrectly - False Negative (FN)
-                reward = -3
+                reward = -4.5
         else: # If the ground truth is 0 normal
             if label_value==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
-                reward = -2
+                reward = -10
             else: # If the model predicts 0 normal correctly - True Negative (TN)
                 reward = 0.1
 
