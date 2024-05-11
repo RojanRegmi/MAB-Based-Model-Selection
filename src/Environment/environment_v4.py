@@ -86,14 +86,13 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
     """
 
-    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], subsequence: List[pd.DataFrame], list_predicted_score: List[List[float]], list_predicted_label: List[List[float]], filepath):
+    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], subsequence: List[pd.DataFrame], list_predicted_score: List[List[float]], list_predicted_label: List[List[float]], window_size = 100):
 
         self.time_series = time_series
-        self.window_size = 25 # find_length(time_series[['value']].to_numpy())
+        self.window_size = window_size # find_length(time_series[['value']].to_numpy())
         self.subsequences = subsequence
         # self._batch_size = batch_size
 
-        self.filepath = filepath
         self.score_list = []
         self.label_list = []
         self.action_list = []
@@ -122,16 +121,6 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
         super(MyModelSelectionEnv, self).__init__(observation_spec, action_spec)
 
-    """def _load_models(self):
-       
-       model1 = pickle.load(open(f'../saved_models/iforest_dodgers_v3.sav','rb'))
-       # model2 = pickle.load(open(f'../saved_models/osvm_dodgers_v2.sav', 'rb'))
-       model3 =  pickle.load(open(f'../saved_models/clof_dodgers_v2.sav', 'rb')) 
-       model4 = pickle.load(open(f'../saved_models/copod_dodgers_v2.sav', 'rb'))
-
-       return [model1, model3, model4]
-    """
-
     def _reset(self):
 
         self.pointer = 0
@@ -157,12 +146,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
         self.score_list.append(scr)
         self.label_list.append(lab)
-        self.action_list.apeend(action)
-
-        if self.pointer % 10000 == 0:
-           filename = self.filepath + f'env_output'
-           with open(self.filepath, 'wb') as file:
-              pickle.dum
+        self.action_list.append(action)
               
 
         if self.pointer >= self.len_data:
@@ -170,7 +154,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
         else:
             self.done = False
 
-        print(f'Step: {self.pointer}, label: {lab}')
+        print(f'Step: {self.pointer}, reward: {reward}')
 
         if not self.done:
             return ts.transition(self._observe(), reward)
@@ -197,14 +181,14 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
         if self.gtruth[self.pointer2]==1: # If the ground truth is 1 anomaly
             if label_value==1: # If the model predicts 1 anomaly correctly - True Positive (TP)
-                reward = 8
+                reward = 4
             else: # If the model predicts 0 normal incorrectly - False Negative (FN)
                 reward = -4.5
         else: # If the ground truth is 0 normal
             if label_value==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
-                reward = -10
+                reward = -6
             else: # If the model predicts 0 normal correctly - True Negative (TN)
-                reward = 0.1
+                reward = 0.3
 
         return reward
     
