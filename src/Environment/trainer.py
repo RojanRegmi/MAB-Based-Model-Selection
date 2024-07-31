@@ -263,9 +263,10 @@ def train(
   training_loop = get_training_loop_fn(
       driver, replay_buffer, agent, steps_per_loop, async_steps_per_loop
   )
-  checkpoint_manager = restore_and_get_checkpoint_manager(
-      root_dir, agent, metrics, step_metric
-  )
+  # checkpoint_manager = restore_and_get_checkpoint_manager(
+      # root_dir, agent, metrics, step_metric
+  # )
+
   train_step_counter = tf.compat.v1.train.get_or_create_global_step()
   if save_policy:
     saver = policy_saver.PolicySaver(
@@ -295,6 +296,6 @@ def train(
 
   for i in range(starting_loop, training_loops):
     training_loop(train_step=i, metrics=metrics)
-    checkpoint_manager.save()
-    if save_policy & (i % 100 == 0):
-      saver.save(os.path.join(root_dir, 'policy_%d' % step_metric.result()))
+    # checkpoint_manager.save()
+    #if save_policy & (i % 100 == 0):
+      # saver.save(os.path.join(root_dir, 'policy_%d' % step_metric.result()))
