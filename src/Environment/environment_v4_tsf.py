@@ -15,6 +15,7 @@ from tf_agents.typing import types
 
 import pickle
 import random
+import math
 
 import sys
 sys.path.append('..')
@@ -24,6 +25,7 @@ from src.logger import logging
 from src.exception import CustomException
 from src.Components.feature_extractor import FeatureExtractor
 from src.Components.data_processing import data_process
+from src.utils import *
 
 from ..utils import *
 
@@ -84,25 +86,31 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
     """
 
-    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], list_predicted_score):
+    def __init__(self, time_series: pd.DataFrame, list_thresholds: List[float], list_gtruth: List[float], subsequence: List[pd.DataFrame], list_predicted_score: List[List[float]], list_predicted_label: List[List[float]], window_size = 20):
 
         self.time_series = time_series
-        self.subsequences = data_process(time_series)
-        # self._batch_size = batch_size
+        self.subsequences = subsequence
+    
+        self.window_size = window_size
 
         self.list_thresholds = list_thresholds
         self.gtruth = list_gtruth
         self.pointer = 0
         self.pred_scr_list = list_predicted_score
+        self.pointer2 = math.ceil((self.window_size - 1) / 2)
+        self.labels = list_predicted_label
 
         self.len_data = len(time_series)
+        self.len_feats = len(subsequence[0])
+        self._num_actions = len(list_predicted_label)
 
-        self.features_obj = FeatureExtractor()
+        # self.features_obj = FeatureExtractor()
+        # self.observation_len = len(self._feature_extractor(self.subsequences[0]))
 
         # self.models = self._load_models()
 
-        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum = 3, name='Models')
-        observation_spec = array_spec.ArraySpec(shape=(159,), dtype=np.float64, name='observation')
+        action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=(self._num_actions - 1), name='Models')
+        observation_spec = array_spec.ArraySpec(shape=(self.len_feats,), dtype=np.float64, name='observation')
 
         self._time_step_spec = ts.time_step_spec(observation_spec)
 
@@ -121,6 +129,7 @@ class MyModelSelectionEnv(BanditPyEnvironment):
     def _reset(self):
 
         self.pointer = 0
+        self.pointer2 = math.ceil((self.window_size - 1) / 2)
         self.pred_list = []
         self.done = False
 
@@ -131,27 +140,28 @@ class MyModelSelectionEnv(BanditPyEnvironment):
 
     def _feature_extractor(self, subseq):
         
-        return self.features_obj.feature_extractor_data(subseq)
+        return subseq.reshape(-1,)
     
     def _step(self, action):
         
         
-        reward, lab = self._apply_action(action)
+        reward, lab, scr = self._apply_action(action)
         self.pointer += 1
+        self.pointer2 += 1
 
         if self.pointer >= self.len_data:
             self.done = True
         else:
             self.done = False
 
-        print(f'Step: {self.pointer}, label: {lab}')
+        print(f'Step: {self.pointer}, reward: {reward}')
 
         if not self.done:
             return ts.transition(self._observe(), reward)
-            #return ts.transition(self.subsequences[self.pointer], reward)
+            
         else:
            return ts.termination(self._observe(), reward)
-           #return ts.termination(self.subsequences[self.pointer], reward)
+           
 
                 
     def _observe(self):
@@ -161,25 +171,38 @@ class MyModelSelectionEnv(BanditPyEnvironment):
     
     def _apply_action(self, action):
 
-        label_value = self.pred_scr_list[action][self.pointer+50]
+        anomaly_score = self.pred_scr_list[action][self.pointer2]
+        label_value = self.labels[action][self.pointer2]
         reward = self._reward_function(label_value)
+
+        label = self._thresholder(anomaly_score, action)
         
-        return reward, label_value
+        return reward, label, anomaly_score
     
     def _reward_function(self, label_value):
 
-        if self.gtruth[self.pointer]==1: # If the ground truth is 1 anomaly
-            if label_value==1: # If the model predicts 1 anomaly correctly - True Positive (TP)
-                reward = 1.25
+        if label_value == 1: # If the ground truth is 1 anomaly
+            if self.gtruth[self.pointer2]==1: # If the model predicts 1 anomaly correctly - True Positive (TP)
+                reward = 4
             else: # If the model predicts 0 normal incorrectly - False Negative (FN)
-                reward = -1.5
-        else: # If the ground truth is 0 normal
-            if label_value==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
-                reward = -0.75
+                reward = -4.5
+        elif label_value == 0: # If the ground truth is 0 normal
+            if self.gtruth[self.pointer2]==1: # If the model predicts 1 anomaly incorrectly - False Positive (FP)
+                reward = -6
             else: # If the model predicts 0 normal correctly - True Negative (TN)
-                reward = 0.1
+                reward = 0.3
+        else:
+            reward = -20
 
-        return reward
+        return np.array(reward)
+    
+    def _thresholder(self, score, action):
+       
+       label = 1 if score >= self.list_thresholds[action] else 0
+
+       return label
+
+       
     
     def time_step_spec(self) -> ts.TimeStep:
        return super().time_step_spec()
