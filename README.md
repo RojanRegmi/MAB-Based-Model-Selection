@@ -10,6 +10,7 @@ To run the code, install the required libraries listed in `requirements.txt` by 
 
 ```bash
 pip install -r requirements.txt
+```
 
 ## Usage
 
